@@ -1,1 +1,6 @@
+discord.py-self
 flask
+requests
+pymongo
+dnspython
+gunicorn
