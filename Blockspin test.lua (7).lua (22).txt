@@ -1942,6 +1942,85 @@ ChaterTab:Toggle({
 })
 
 
+--// Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+--// Player
+local LocalPlayer = Players.LocalPlayer
+
+-- Speed Boost (CFrame Based)
+local speedEnabled = false
+local speedValue = 1
+local speedConnection = nil
+
+local function startSpeed()
+    if speedConnection then 
+        speedConnection:Disconnect()
+        speedConnection = nil
+    end
+    
+    speedConnection = RunService.RenderStepped:Connect(function()
+        if not speedEnabled then return end
+        
+        local char = LocalPlayer.Character
+        if not char then return end
+        
+        local humanoid = char:FindFirstChild("Humanoid")
+        local rootPart = char:FindFirstChild("HumanoidRootPart")
+        
+        if humanoid and rootPart and humanoid.MoveDirection.Magnitude > 0 then
+            local dir = humanoid.MoveDirection
+            rootPart.CFrame = rootPart.CFrame + (dir.Unit * (speedValue / 5))
+        end
+    end)
+end
+
+-- Toggle
+ChaterTab:Toggle({
+    Title = "walk Speed ",
+    Desc = "วิ่งไว",
+    Default = false,
+    Callback = function(state)
+        speedEnabled = state
+        if state then
+            startSpeed()
+        else
+            if speedConnection then
+                speedConnection:Disconnect()
+                speedConnection = nil
+            end
+        end
+    end
+})
+
+-- Slider
+ChaterTab:Slider({
+    Title = "Speed Value",
+    Desc = "ปรับค่าความเร็วในการวิ่ง",
+    Step = 0.01,
+    Value = {
+        Min = 1,
+        Max = 1.3,
+        Default = 1
+    },
+    Callback = function(v)
+        speedValue = v
+    end
+})
+
+-- Respawn Fix
+LocalPlayer.CharacterAdded:Connect(function()
+    if speedConnection then
+        speedConnection:Disconnect()
+        speedConnection = nil
+    end
+    if speedEnabled then
+        task.wait(0.5)
+        startSpeed()
+    end
+end)
+
 
 ChaterTab:Toggle({Title = "jump power (กระโดดสูง)", Default = false, Callback = function(state)
     jumpEnabled = state
