@@ -108,7 +108,7 @@ local Window = App:Window({
     CanExit     = true,
     CanMinimize = true,
     CanZoom     = false,
-    Size        = UDim2.fromOffset(360, 480),
+    Size        = UDim2.fromOffset(460, 380),
     Position    = UDim2.new(0.5, 0, 0.5, 0),
     AnchorPoint = Vector2.new(0.5, 0.5),
 })
