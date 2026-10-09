@@ -625,9 +625,147 @@ end
 
 getgenv().Autofarm = Autofarm
 
+
+
+
+
+
+
+
+-- // Fly \\\
+
+
+local Players          = game:GetService("Players")
+local RunService       = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+
 -- ============================================================
--- 🎨 CASCADE UI
+-- [3] Fly State
 -- ============================================================
+local flySpeed      = 50
+local rotationSpeed = 0.15
+local accelFactor   = 0.28
+local flyEnabled    = false
+local flying        = false
+local bodyVelocity, bodyGyro, flyConnection
+local currentVelocity   = Vector3.zero
+local lastLookDirection = Vector3.new(0, 0, -1)
+local currentKeybind    = Enum.KeyCode.F
+
+-- ============================================================
+-- [4] Helpers
+-- ============================================================
+local function getCharacter()
+    return player.Character or player.CharacterAdded:Wait()
+end
+
+local function getRootPart()
+    local char = getCharacter()
+    return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+end
+
+local function waitForControlModule()
+    local ok, mod = pcall(function()
+        return require(player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
+    end)
+    return ok and mod or nil
+end
+
+-- ============================================================
+-- [5] Fly Core
+-- ============================================================
+local function startFly()
+    local char = getCharacter()
+    local root = getRootPart()
+    if not char or not root then return end
+
+    flying = true
+    currentVelocity = Vector3.zero
+
+    if bodyVelocity then bodyVelocity:Destroy() end
+    if bodyGyro then bodyGyro:Destroy() end
+
+    bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bodyVelocity.Velocity = Vector3.zero
+    bodyVelocity.Parent = root
+
+    bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    bodyGyro.P = 5e4
+    bodyGyro.D = 500
+    bodyGyro.CFrame = root.CFrame
+    bodyGyro.Parent = root
+
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.PlatformStand = true
+        for _, t in ipairs(humanoid:GetPlayingAnimationTracks()) do t:Stop() end
+    end
+
+    local controlModule = waitForControlModule()
+    local camera = workspace.CurrentCamera
+    lastLookDirection = camera.CFrame.LookVector
+
+    if flyConnection then flyConnection:Disconnect() end
+    flyConnection = RunService.Heartbeat:Connect(function()
+        if not flyEnabled or not flying or not root or not root.Parent then return end
+
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum and not hum.PlatformStand then hum.PlatformStand = true end
+
+        local moveVec = controlModule and controlModule:GetMoveVector() or Vector3.zero
+        local targetVelocity = Vector3.zero
+        if moveVec.Magnitude > 0.05 then
+            targetVelocity = camera.CFrame:VectorToWorldSpace(moveVec).Unit * flySpeed
+        end
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            targetVelocity = targetVelocity + Vector3.new(0, flySpeed, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+            targetVelocity = targetVelocity + Vector3.new(0, -flySpeed, 0)
+        end
+
+        currentVelocity = currentVelocity:Lerp(targetVelocity, accelFactor)
+        if bodyVelocity then bodyVelocity.Velocity = currentVelocity end
+
+        if bodyGyro then
+            local smoothed = lastLookDirection:Lerp(camera.CFrame.LookVector, rotationSpeed)
+            lastLookDirection = smoothed
+            local targetCFrame = CFrame.lookAt(root.Position, root.Position + smoothed)
+            bodyGyro.CFrame = bodyGyro.CFrame:Lerp(targetCFrame, 0.4)
+        end
+    end)
+end
+
+local function stopFly()
+    flying = false
+    currentVelocity = Vector3.zero
+    if flyConnection then flyConnection:Disconnect() flyConnection = nil end
+    if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
+    if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
+
+    local char = getCharacter()
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local root = getRootPart()
+    if hum and root then
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+        hum.PlatformStand = false
+        hum:ChangeState(Enum.HumanoidStateType.Running)
+    end
+end
+
+local function setFlyEnabled(v)
+    flyEnabled = v
+    if v then startFly() else stopFly() end
+end
+
+
+
+
 local app = cascade.New({
     Theme = cascade.Themes.Dark,
     Accent = cascade.Accents.Blue,
@@ -647,6 +785,86 @@ local window = app:Window({
     Dropshadow = true,
 })
 
+
+local section = window:Section({
+    Title      = "Menu",
+    Disclosure = false,
+    Expanded   = true,
+})
+
+local tab = section:Tab({
+    Title    = "Movement",
+    Icon     = cascade.Symbols.figureWalk,
+    Selected = true,
+})
+
+local form = tab:Form()
+
+do
+    local row = form:Row({ SearchIndex = "Enable Fly" })
+    row:Left():TitleStack({
+        Title    = "Fly",
+        Subtitle = "บิน",
+    })
+    local tog
+    tog = row:Right():Toggle({
+        Value = flyEnabled,
+        ValueChanged = function(_, v) setFlyEnabled(v) end,
+    })
+    _G.__syncFlyToggle = function(v) tog.Value = v end
+end
+
+do
+    local row = form:Row({ SearchIndex = "Fly Speed" })
+    row:Left():TitleStack({
+        Title    = "Fly Speed",
+        Subtitle = "ความเร็วในการบิน",
+    })
+    local valueLabel
+    local stack = row:Right():HStack({
+        Padding           = UDim.new(0, 8),
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+    })
+    stack:Slider({
+        Minimum = 10,
+        Maximum = 300,
+        Value   = flySpeed,
+        ValueChanged = function(_, v)
+            flySpeed = v
+            if valueLabel then
+                valueLabel.Text = string.format("%.0f", v)
+            end
+        end,
+    })
+
+    valueLabel = stack:Label({
+        Text = string.format("%.0f", flySpeed),
+    })
+end
+
+-- ============================================================
+-- [7] Input & Respawn
+-- ============================================================
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == currentKeybind then
+        setFlyEnabled(not flyEnabled)
+        if _G.__syncFlyToggle then _G.__syncFlyToggle(flyEnabled) end
+    end
+end)
+
+player.CharacterAdded:Connect(function()
+    if flyEnabled then
+        task.wait(1)
+        startFly()
+    end
+end)
+
+
+
+
+
+
 local section = window:Section({
     Title = "Main",
     Disclosure = true,
@@ -655,7 +873,7 @@ local section = window:Section({
 
 local tab = section:Tab({
     Selected = true,
-    Title = "Controls",
+    Title = "Main",
     Icon = cascade.Symbols.squareStack3dUp,
 })
 
@@ -666,7 +884,7 @@ do
     local row = form:Row({ SearchIndex = "Autofarm" })
     row:Left():TitleStack({
         Title = "Autofarm",
-        Subtitle = "ปั่นไฟอัตโนมัติ (เปิด SkillCheck + Noclip ให้ด้วย)",
+        Subtitle = "ออโต้ฟาม",
     })
     UIToggles.Autofarm = row:Right():Toggle({
         Value = false,
@@ -689,12 +907,11 @@ do
     end)
 end
 
--- ================== Skill Check ==================
 do
     local row = form:Row({ SearchIndex = "Skill Check" })
     row:Left():TitleStack({
         Title = "Auto Skill Check",
-        Subtitle = "auto great ทุกมินิเกม",
+        Subtitle = "ออโต้ผ่านมินิเกม",
     })
     UIToggles.SkillCheck = row:Right():Toggle({
         Value = false,
