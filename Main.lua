@@ -48,8 +48,7 @@ print("[ 999MS ] AC Bypass: ACTIVE")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = game.Players.LocalPlayer
-
-
+repeat task.wait() until player and player.Parent
 
 local function importRelease(owner, repo, version, file)
     local tag = (version == "latest" and "latest/download" or "download/" .. version)
@@ -868,22 +867,22 @@ end
 
 
 
-local section = window:Section({
+local sectionMove = window:Section({
     Title      = "Menu",
     Disclosure = false,
     Expanded   = true,
 })
 
-local tab = section:Tab({
+local tabMove = section:Tab({
     Title    = "Movement",
     Icon     = cascade.Symbols.figureWalk,
     Selected = true,
 })
 
-local form = tab:Form()
+local formmove = tabMove:Form()
 
 do
-    local row = form:Row({ SearchIndex = "Enable Fly" })
+    local row = formmove:Row({ SearchIndex = "Enable Fly" })
     row:Left():TitleStack({
         Title    = "Fly",
         Subtitle = "บิน",
@@ -897,7 +896,7 @@ do
 end
 
 do
-    local row = form:Row({ SearchIndex = "Fly Speed" })
+    local row = formmove:Row({ SearchIndex = "Fly Speed" })
     row:Left():TitleStack({
         Title    = "Fly Speed",
         Subtitle = "ความเร็วในการบิน",
@@ -940,7 +939,7 @@ end)
 
 
 do
-    local row = form:Row({ SearchIndex = "Speed Boost" })
+    local row = formmove:Row({ SearchIndex = "Speed Boost" })
     row:Left():TitleStack({
         Title    = "Speed Boost",
         Subtitle = "เพิ่มความเร็วการเคลื่อนที่",
