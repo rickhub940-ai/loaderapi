@@ -60,7 +60,7 @@ player.CharacterAdded:Connect(function(c)
     killAC(c)
 end)
 
-print("🛡️ AC Kill: ACTIVE")
+print("[ 999MS ] AC Bypass: ACTIVE")
 
 -- ============================================================
 -- ⚡ SKILL CHECK
