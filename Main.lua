@@ -1,29 +1,8 @@
--- ============================================================
--- 999ms HUB | Dandy's World
--- ============================================================
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local player = game.Players.LocalPlayer
 
--- ============================================================
--- LOAD CASCADE UI
--- ============================================================
-local function importRelease(owner, repo, version, file)
-    local tag = (version == "latest" and "latest/download" or "download/" .. version)
-    return loadstring(game:HttpGetAsync(
-        ("https://github.com/%s/%s/releases/%s/%s"):format(owner, repo, tag, file)
-    ), file)()
-end
-
-local cascade = importRelease("cascadeui", "Cascade", "latest", "dist.luau")
-
--- ============================================================
--- 🔝 AC KILL
--- ============================================================
 local function killAC(char)
     local hum = char:WaitForChild("Humanoid", 10)
     local hrp = char:WaitForChild("HumanoidRootPart", 10)
     if not hum or not hrp then return end
-
     for _, sig in ipairs({
         hum:GetPropertyChangedSignal("WalkSpeed"),
         hum:GetPropertyChangedSignal("HipHeight"),
@@ -62,11 +41,29 @@ end)
 
 print("[ 999MS ] AC Bypass: ACTIVE")
 
--- ============================================================
--- ⚡ SKILL CHECK
--- ============================================================
-local SkillCheck = { Enabled = false }
 
+
+
+
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = game.Players.LocalPlayer
+
+
+
+local function importRelease(owner, repo, version, file)
+    local tag = (version == "latest" and "latest/download" or "download/" .. version)
+    return loadstring(game:HttpGetAsync(
+        ("https://github.com/%s/%s/releases/%s/%s"):format(owner, repo, tag, file)
+    ), file)()
+end
+
+local cascade = importRelease("cascadeui", "Cascade", "latest", "dist.luau")
+
+
+
+
+local SkillCheck = { Enabled = false }
 function SkillCheck:Start()
     if self.Enabled then return end
     local ev = ReplicatedStorage:WaitForChild("Events", 8)
@@ -79,17 +76,12 @@ function SkillCheck:Start()
         return "supercomplete"
     end
     self.Enabled = true
-    print("⚡ SkillCheck: ON")
 end
 
 function SkillCheck:Stop()
     self.Enabled = false
-    print("⚡ SkillCheck: OFF (handler ยังอยู่)")
 end
 
--- ============================================================
--- 🔀 FLAGS
--- ============================================================
 local Flags = {
     SkillCheck = false,
     Noclip     = false,
@@ -119,12 +111,10 @@ local busyTick = 0
 local fireTick = 0
 local isNoclipping = false
 local isTransitioning = false
-local isEvading = false        -- ✅ flag ใหม่: กำลังหนีมอนอยู่
-local currentGen = nil         -- ✅ เก็บ generator ที่กำลังปั่น
+local isEvading = false        
+local currentGen = nil         
 
--- ============================================================
--- HELPERS
--- ============================================================
+
 local function getChar()
     local c = player and player.Character
     if not c then return end
@@ -135,7 +125,6 @@ local function dist(a, b)
     if not a or not b then return math.huge end
     return (a - b).Magnitude
 end
-
 local function getPos(t)
     if not t then return nil end
     if typeof(t) == "Vector3" then return t end
@@ -144,7 +133,6 @@ local function getPos(t)
     if ok and p then return p.Position end
     return nil
 end
-
 local function getGenPos(g)
     if not g then return nil end
     local tp = g:FindFirstChild("TeleportPositions")
@@ -154,7 +142,6 @@ local function getGenPos(g)
     end
     return getPos(g)
 end
-
 local function getMyModel()
     local c = player and player.Character
     if c and c.Parent then return c end
@@ -165,7 +152,6 @@ local function getMyModel()
         end
     end
 end
-
 local function getChasing()
     local me = getMyModel()
     if not me then return false, nil end
@@ -173,7 +159,6 @@ local function getChasing()
     if not room then return false, nil end
     local myRoot = me:FindFirstChild("HumanoidRootPart")
     if not myRoot then return false, nil end
-
     local best, bestD = nil, math.huge
     for _, map in pairs(room:GetChildren()) do
         if map:IsA("Model") or map:IsA("Folder") then
@@ -224,9 +209,6 @@ local function clearBV(root)
     if bv then bv:Destroy() end
 end
 
--- ============================================================
--- 🔁 BACKGROUND LOOPS
--- ============================================================
 task.spawn(function()
     while task.wait(0.3) do
         if Flags.SkillCheck and not SkillCheck.Enabled then
@@ -252,20 +234,15 @@ task.spawn(function()
     end
 end)
 
--- ============================================================
--- MOVE
--- ============================================================
 local function moveTo(t)
     local c, hum, root = getChar()
     if not c or not hum or not root then return "fail" end
     isNoclipping = true
-
     local function targetPos()
         if typeof(t) == "Vector3" then return t end
         if t:FindFirstChild("TeleportPositions") then return getGenPos(t) end
         return getPos(t)
     end
-
     local startPos = targetPos()
     if startPos then
         local d0 = (startPos - root.Position).Magnitude
@@ -282,13 +259,10 @@ local function moveTo(t)
 
     while true do
         task.wait(TICK)
-
-        -- ✅ ถ้าเริ่ม evade → ออกทันที
         if isEvading then
             clearBV(root); hum:MoveTo(root.Position)
             return "evading"
         end
-
         if typeof(t) ~= "Vector3" and not t.Parent then
             clearBV(root); hum:MoveTo(root.Position)
             isNoclipping = false; restoreCollision()
@@ -589,8 +563,6 @@ function Autofarm:Start()
             currentGen = nil
         end
     end)
-
-    print("✅ Autofarm: ON")
 end
 
 function Autofarm:Stop()
@@ -614,7 +586,6 @@ function Autofarm:Stop()
     busy = false; target = nil
     isTransitioning = false
     currentGen = nil
-    print("🛑 Autofarm: OFF")
 end
 
 function Autofarm:Toggle(state)
@@ -672,32 +643,25 @@ local function waitForControlModule()
     return ok and mod or nil
 end
 
--- ============================================================
--- [5] Fly Core
--- ============================================================
+
 local function startFly()
     local char = getCharacter()
     local root = getRootPart()
     if not char or not root then return end
-
     flying = true
     currentVelocity = Vector3.zero
-
     if bodyVelocity then bodyVelocity:Destroy() end
     if bodyGyro then bodyGyro:Destroy() end
-
     bodyVelocity = Instance.new("BodyVelocity")
     bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
     bodyVelocity.Velocity = Vector3.zero
     bodyVelocity.Parent = root
-
     bodyGyro = Instance.new("BodyGyro")
     bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
     bodyGyro.P = 5e4
     bodyGyro.D = 500
     bodyGyro.CFrame = root.CFrame
     bodyGyro.Parent = root
-
     local humanoid = char:FindFirstChildOfClass("Humanoid")
     if humanoid then
         humanoid.PlatformStand = true
@@ -766,6 +730,30 @@ end
 
 
 
+
+-- // Speed boost \\
+
+local boostConns = {}
+local function SpeedBoost()
+    for _, c in ipairs(boostConns) do c:Disconnect() end
+    table.clear(boostConns)
+    local function lock()
+        local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if h and h.WalkSpeed ~= 30 then h.WalkSpeed = 30 end
+    end
+    boostConns[#boostConns+1] = RunService.Heartbeat:Connect(lock)
+    boostConns[#boostConns+1] = player.CharacterAdded:Connect(function()
+        task.wait(0.1)
+        lock()
+    end)
+    lock()
+end
+
+
+
+
+
+
 local app = cascade.New({
     Theme = cascade.Themes.Dark,
     Accent = cascade.Accents.Blue,
@@ -784,81 +772,6 @@ local window = app:Window({
     Draggable = true,
     Dropshadow = true,
 })
-
-
-local section = window:Section({
-    Title      = "Menu",
-    Disclosure = false,
-    Expanded   = true,
-})
-
-local tab = section:Tab({
-    Title    = "Movement",
-    Icon     = cascade.Symbols.figureWalk,
-    Selected = true,
-})
-
-local form = tab:Form()
-
-do
-    local row = form:Row({ SearchIndex = "Enable Fly" })
-    row:Left():TitleStack({
-        Title    = "Fly",
-        Subtitle = "บิน",
-    })
-    local tog
-    tog = row:Right():Toggle({
-        Value = flyEnabled,
-        ValueChanged = function(_, v) setFlyEnabled(v) end,
-    })
-    _G.__syncFlyToggle = function(v) tog.Value = v end
-end
-
-do
-    local row = form:Row({ SearchIndex = "Fly Speed" })
-    row:Left():TitleStack({
-        Title    = "Fly Speed",
-        Subtitle = "ความเร็วในการบิน",
-    })
-    local valueLabel
-    local stack = row:Right():HStack({
-        Padding           = UDim.new(0, 8),
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-    })
-    stack:Slider({
-        Minimum = 10,
-        Maximum = 300,
-        Value   = flySpeed,
-        ValueChanged = function(_, v)
-            flySpeed = v
-            if valueLabel then
-                valueLabel.Text = string.format("%.0f", v)
-            end
-        end,
-    })
-
-    valueLabel = stack:Label({
-        Text = string.format("%.0f", flySpeed),
-    })
-end
-
--- ============================================================
--- [7] Input & Respawn
--- ============================================================
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == currentKeybind then
-        setFlyEnabled(not flyEnabled)
-        if _G.__syncFlyToggle then _G.__syncFlyToggle(flyEnabled) end
-    end
-end)
-
-player.CharacterAdded:Connect(function()
-    if flyEnabled then
-        task.wait(1)
-        startFly()
-    end
-end)
 
 
 
@@ -937,9 +850,7 @@ do
     })
 end
 
--- ============================================================
--- ⌨️ KEYBIND: RightControl = Toggle UI
--- ============================================================
+
 do
     local UIS = game:GetService("UserInputService")
     local gui = app.__instance or app
@@ -953,4 +864,91 @@ do
     end)
 end
 
-print("✅ 999ms HUB โหลดสำเร็จ — RightControl เพื่อเปิด/ปิด UI")
+
+
+
+
+local section = window:Section({
+    Title      = "Menu",
+    Disclosure = false,
+    Expanded   = true,
+})
+
+local tab = section:Tab({
+    Title    = "Movement",
+    Icon     = cascade.Symbols.figureWalk,
+    Selected = true,
+})
+
+local form = tab:Form()
+
+do
+    local row = form:Row({ SearchIndex = "Enable Fly" })
+    row:Left():TitleStack({
+        Title    = "Fly",
+        Subtitle = "บิน",
+    })
+    local tog
+    tog = row:Right():Toggle({
+        Value = flyEnabled,
+        ValueChanged = function(_, v) setFlyEnabled(v) end,
+    })
+    _G.__syncFlyToggle = function(v) tog.Value = v end
+end
+
+do
+    local row = form:Row({ SearchIndex = "Fly Speed" })
+    row:Left():TitleStack({
+        Title    = "Fly Speed",
+        Subtitle = "ความเร็วในการบิน",
+    })
+    local valueLabel
+    local stack = row:Right():HStack({
+        Padding           = UDim.new(0, 8),
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+    })
+    stack:Slider({
+        Minimum = 10,
+        Maximum = 300,
+        Value   = flySpeed,
+        ValueChanged = function(_, v)
+            flySpeed = v
+            if valueLabel then
+                valueLabel.Text = string.format("%.0f", v)
+            end
+        end,
+    })
+
+    valueLabel = stack:Label({
+        Text = string.format("%.0f", flySpeed),
+    })
+end
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == currentKeybind then
+        setFlyEnabled(not flyEnabled)
+        if _G.__syncFlyToggle then _G.__syncFlyToggle(flyEnabled) end
+    end
+end)
+
+player.CharacterAdded:Connect(function()
+    if flyEnabled then
+        task.wait(1)
+        startFly()
+    end
+end)
+
+
+do
+    local row = form:Row({ SearchIndex = "Speed Boost" })
+    row:Left():TitleStack({
+        Title    = "Speed Boost",
+        Subtitle = "เพิ่มความเร็วการเคลื่อนที่",
+    })
+    row:Right():Toggle({
+        ValueChanged = function(_, v)
+            if v then SpeedBoost() end
+        end,
+    })
+end
+
